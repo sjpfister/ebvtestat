@@ -14,11 +14,17 @@
 
 OSC_ERR OscVisDrawBoundingBoxBW(struct OSC_PICTURE *picIn, struct OSC_VIS_REGIONS *regions, uint8 Color);
 
+
 void ProcessFrame(uint8 *pInputImg)
 {
+	int histogramm[256];
+	int histsum;
+	int thresh;
+	float temp;
 	int c, r;
 	int nc = OSC_CAM_MAX_IMAGE_WIDTH/2;
 	int siz = sizeof(data.u8TempImage[GRAYSCALE]);
+	int w0,w1,m0,m1,i,k;
 
 	int Shift = 7;
 	short Beta = 2;//the meaning is that in floating point the value of Beta is = 6/(1 << Shift) = 6/128 = 0.0469
@@ -37,6 +43,49 @@ void ProcessFrame(uint8 *pInputImg)
 	}
 	else
 	{
+		thresh=0;
+		for(r = 0; r < siz; r+= nc)/* we strongly rely on the fact that them images have the same size */
+				{
+					for(c = 0; c < nc; c++)
+					{
+						histogramm[data.u8TempImage[GRAYSCALE][r+c]]++;
+
+					}
+				}
+		for(i=0;i<256;i++){
+					histsum+=histogramm[i];
+				}
+		for(k=0;k<256;k++){
+			w0=0;
+			w1=0;
+			m0=0;
+			m1=0;
+
+		for(i=0;i<k;i++){
+			w0+=histogramm[i];
+			m0+=(histogramm[i]*i);
+		}
+		//w0=w0/histsum;
+
+		for(i=k;i<256;i++){
+			w1+=histogramm[i];
+			m1+=(histogramm[i]*i);
+		}
+		//w1=w1/histsum;
+
+		//m0=m0/histsum;
+
+
+		//m1=m1/histsum;
+		if(temp<((float)w0*(float)w1*((m0/(float)w0-m1/(float)w1)*(m0/(float)w0-m1/(float)w1)))){
+		temp=((float)w0*(float)w1*((m0/(float)w0-m1/(float)w1)*(m0/(float)w0-m1/(float)w1)));
+		thresh=k;
+		}
+
+		}
+
+
+		data.ipc.state.nThreshold =k; //(thresh*100)/255;
 		/* this is the default case */
 		for(r = 0; r < siz; r+= nc)/* we strongly rely on the fact that them images have the same size */
 		{
